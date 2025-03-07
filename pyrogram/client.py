@@ -61,7 +61,7 @@ from pyrogram.methods import Methods
 from pyrogram.session import Auth, Session
 from pyrogram.storage import FileStorage, MemoryStorage, Storage
 from pyrogram.types import User, TermsOfService
-from pyrogram.utils import ainput
+from pyrogram.utils import ainput, run_sync
 from .connection import Connection
 from .connection.transport import TCP, TCPAbridged
 from .dispatcher import Dispatcher
@@ -135,8 +135,9 @@ class Client(Methods):
             Only applicable for new sessions.
 
         session_string (``str``, *optional*):
-            Pass a session string to load the session in-memory.
-            Implies ``in_memory=True``.
+            Pass a session string to load the session from a session string.
+            Do you want a .session file? Use ``in_memory=False``,
+            for in-memory use ``in_memory=True``.
 
         is_telethon_string (``bool``, *optional*):
             ``True`` if your provided session_string is in the telethon format.
@@ -340,14 +341,14 @@ class Client(Methods):
 
         if storage:
             self.storage = storage
-        elif self.session_string:
+        elif self.in_memory:
             self.storage = MemoryStorage(
                 self.name, self.session_string, self.is_telethon_string
             )
-        elif self.in_memory:
-            self.storage = MemoryStorage(self.name)
         else:
-            self.storage = FileStorage(self.name, self.workdir)
+            self.storage = FileStorage(
+                self.name, self.workdir, self.session_string, self.is_telethon_string
+            )
 
         self.dispatcher = Dispatcher(self)
 
@@ -1211,11 +1212,11 @@ class Client(Methods):
             async for chunk in self.get_file(
                 file_id, file_size, 0, 0, progress, progress_args
             ):
-                file.write(chunk)
+                await run_sync(file.write, chunk)
         except BaseException as e:
             if not in_memory:
                 file.close()
-                os.remove(temp_file_path)
+                await run_sync(os.remove, temp_file_path)
 
             if isinstance(e, asyncio.CancelledError):
                 raise e
@@ -1231,7 +1232,7 @@ class Client(Methods):
             else:
                 file.close()
                 file_path = os.path.splitext(temp_file_path)[0]
-                shutil.move(temp_file_path, file_path)
+                await run_sync(shutil.move, temp_file_path, file_path)
                 return file_path
 
     async def get_file(

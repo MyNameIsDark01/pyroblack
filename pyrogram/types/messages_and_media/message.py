@@ -1220,6 +1220,8 @@ class Message(Object, Update):
                                     video_attributes,
                                     file_name,
                                     media.ttl_seconds,
+                                    media.video_cover,
+                                    media.video_timestamp,
                                 )
                                 media_type = enums.MessageMediaType.VIDEO
                                 has_media_spoiler = media.spoiler
